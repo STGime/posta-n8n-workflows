@@ -6,12 +6,21 @@ All templates use the verified [`n8n-nodes-posta`](https://www.npmjs.com/package
 
 ## Workflows
 
-| Workflow | What it does | Requires | Import |
-|----------|--------------|----------|--------|
-| **Blog post → social media** | Reads your blog RSS feed and schedules a social post (with the article image) across your connected accounts. | Posta | [JSON](workflows/blog-to-social-media.json) · [Guide](https://getposta.app/workflows/blog-to-social-media) |
-| **Blog post → LinkedIn carousel** | Summarizes a new blog post into a 5-slide LinkedIn carousel PDF — AI text (DeepSeek) over AI backgrounds (fal.ai), assembled by Posta. | Posta (Professional), DeepSeek, fal.ai | [JSON](workflows/blog-to-linkedin-carousel.json) · [Guide](https://getposta.app/workflows/blog-to-linkedin-carousel) |
-| **5-day product launch campaign** | Turns a product into a 5-day, multi-platform launch campaign with per-network captions written by AI. | Posta, DeepSeek | [JSON](workflows/product-launch-campaign.json) · [Guide](https://getposta.app/workflows/product-launch-campaign) |
-| **YouTube video → social media** | Reads your YouTube feed, grabs the latest video and thumbnail, and drafts AI promo posts for every platform. | Posta, DeepSeek | [JSON](workflows/youtube-to-social-media.json) · [Guide](https://getposta.app/workflows/youtube-to-social-media) |
+| Workflow | What it does | Requires | Import | Demo |
+|----------|--------------|----------|--------|------|
+| **Blog post → social media** | Reads your blog RSS feed and schedules a social post (with the article image) across your connected accounts. | Posta | [JSON](workflows/blog-to-social-media.json) · [Guide](https://getposta.app/workflows/blog-to-social-media) | [▶ Watch](https://youtu.be/Ra9x57asFnk) |
+| **Blog post → LinkedIn carousel** | Summarizes a new blog post into a 5-slide LinkedIn carousel PDF — AI text (DeepSeek) over AI backgrounds (fal.ai), assembled by Posta. | Posta (Professional), DeepSeek, fal.ai | [JSON](workflows/blog-to-linkedin-carousel.json) · [Guide](https://getposta.app/workflows/blog-to-linkedin-carousel) | [▶ Watch](https://youtu.be/CC-_i6LanLg) |
+| **5-day product launch campaign** | Turns a product into a 5-day, multi-platform launch campaign with per-network captions written by AI. | Posta, DeepSeek | [JSON](workflows/product-launch-campaign.json) · [Guide](https://getposta.app/workflows/product-launch-campaign) | [▶ Watch](https://youtu.be/ORQZK_oApIQ) |
+| **YouTube video → social media** | Reads your YouTube feed, grabs the latest video and thumbnail, and drafts AI promo posts for every platform. | Posta, DeepSeek | [JSON](workflows/youtube-to-social-media.json) · [Guide](https://getposta.app/workflows/youtube-to-social-media) | [▶ Watch](https://youtu.be/tTWaYb71YyA) |
+
+## Video walkthroughs
+
+Each template has a short demo (click a thumbnail to watch):
+
+| | |
+|:-:|:-:|
+| [![Blog post → social media](https://img.youtube.com/vi/Ra9x57asFnk/hqdefault.jpg)](https://youtu.be/Ra9x57asFnk)<br>**Blog post → social media** | [![Blog post → LinkedIn carousel](https://img.youtube.com/vi/CC-_i6LanLg/hqdefault.jpg)](https://youtu.be/CC-_i6LanLg)<br>**Blog post → LinkedIn carousel** |
+| [![5-day product launch campaign](https://img.youtube.com/vi/ORQZK_oApIQ/hqdefault.jpg)](https://youtu.be/ORQZK_oApIQ)<br>**5-day product launch campaign** | [![YouTube video → social media](https://img.youtube.com/vi/tTWaYb71YyA/hqdefault.jpg)](https://youtu.be/tTWaYb71YyA)<br>**YouTube video → social media** |
 
 ## How to import
 
