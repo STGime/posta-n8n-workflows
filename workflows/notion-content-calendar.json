@@ -1,0 +1,318 @@
+{
+  "name": "Notion content calendar → Posta multi-platform schedule",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Notion content calendar → Posta multi-platform schedule\n\n### What it does\n\nEvery 15 minutes, this workflow polls a Notion database for rows that are\n`Status = Approved` and whose `Scheduled At` falls inside the next 15-min\nwindow. For each row it creates a Posta post, schedules it for that time,\nand updates the Notion row with the resulting Posta post URL.\n\n### Notion database schema (required columns)\n\n| Column                | Type           | Notes                                                                        |\n|-----------------------|----------------|------------------------------------------------------------------------------|\n| `Caption`             | Title (text)   | The post body. Used as the Posta caption.                                    |\n| `Status`              | Select         | One of: Draft, Approved, Scheduled, Posted, Failed.                          |\n| `Scheduled At`        | Date (w/ time) | When the post should go live.                                                |\n| `Social Account IDs`  | Text           | Comma-separated Posta social-account IDs (e.g. `35, 42, 99`).               |\n| `Media IDs`           | Text (optional)| Comma-separated Posta media IDs (upload to Posta first; this is by reference)|\n| `Posta Post URL`      | URL (optional) | The workflow writes the Posta post URL back here after scheduling.           |\n\n### Setup steps\n\n- [ ] Add your Posta credential (API token) to every Posta node\n- [ ] Add your Notion integration credential to the Notion nodes\n- [ ] In `Get approved rows`, set the database ID to your content calendar\n- [ ] Confirm the property names match your Notion columns exactly\n- [ ] Activate the workflow (top-right toggle) — the 15-min cron will start firing\n\n### Customisation\n\n- Tighten the schedule cadence (e.g. every 5 min) if you have many same-day rows.\n- Add an optional `If — Regenerate with AI` branch after `Split In Batches` to rewrite the caption per-platform via OpenAI before posting. Out of scope for v1.",
+        "width": 540,
+        "height": 1000
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -400
+      ],
+      "id": "0a000000-0000-0000-0000-00000000000a",
+      "name": "Sticky Note – Overview"
+    },
+    {
+      "parameters": {
+        "content": "## 1. Poll Notion every 15 min\n\nFetches every row in the calendar whose `Status = Approved` AND `Scheduled At ≤ now + 15 min`. The cron interval and the time window are deliberately the same so each row is picked up exactly once.",
+        "width": 620,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -400
+      ],
+      "id": "0b000000-0000-0000-0000-00000000000b",
+      "name": "Sticky Note – Step 1"
+    },
+    {
+      "parameters": {
+        "content": "## 2. Create + schedule each post\n\nFor every row returned, create a Posta post with the row's caption, social accounts and (optional) media, then schedule it for the row's `Scheduled At` time.",
+        "width": 360,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -400
+      ],
+      "id": "0c000000-0000-0000-0000-00000000000c",
+      "name": "Sticky Note – Step 2"
+    },
+    {
+      "parameters": {
+        "content": "## 3. Write the result back to Notion\n\nFlips the row's `Status` to `Scheduled` and writes the Posta post URL into the `Posta Post URL` column so the calendar always reflects what actually shipped.",
+        "width": 360,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        -400
+      ],
+      "id": "0d000000-0000-0000-0000-00000000000d",
+      "name": "Sticky Note – Step 3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000001",
+      "name": "Every 15 minutes"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_NOTION_DATABASE_ID",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status|select",
+              "condition": "equals",
+              "selectValue": "Approved"
+            },
+            {
+              "key": "Scheduled At|date",
+              "condition": "before",
+              "date": "={{ $now.plus({ minutes: 15 }).toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -220,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000002",
+      "name": "Get approved rows",
+      "credentials": {
+        "notionApi": {
+          "id": "REPLACE_NOTION_CREDENTIAL_ID",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -20,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000003",
+      "name": "For each row"
+    },
+    {
+      "parameters": {
+        "socialAccountIds": "={{ $json.property_social_account_ids.split(',').map(s => s.trim()) }}",
+        "caption": "={{ $json.property_caption }}",
+        "additionalFields": {
+          "mediaIds": "={{ $json.property_media_ids ? $json.property_media_ids.split(',').map(s => s.trim()) : [] }}"
+        }
+      },
+      "type": "n8n-nodes-posta.posta",
+      "typeVersion": 1,
+      "position": [
+        260,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000004",
+      "name": "Create a post",
+      "credentials": {
+        "postaApi": {
+          "id": "REPLACE_POSTA_CREDENTIAL_ID",
+          "name": "Posta account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "schedule",
+        "postId": "={{ $json.id }}",
+        "scheduledAt": "={{ $('For each row').item.json.property_scheduled_at }}"
+      },
+      "type": "n8n-nodes-posta.posta",
+      "typeVersion": 1,
+      "position": [
+        460,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000005",
+      "name": "Schedule the post",
+      "credentials": {
+        "postaApi": {
+          "id": "REPLACE_POSTA_CREDENTIAL_ID",
+          "name": "Posta account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('For each row').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|select",
+              "selectValue": "Scheduled"
+            },
+            {
+              "key": "Posta Post URL|url",
+              "urlValue": "={{ $json.platformPostUrl || $('Schedule the post').item.json.url || ('https://getposta.app/app/posts/' + $('Schedule the post').item.json.id) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000006",
+      "name": "Mark row as scheduled",
+      "credentials": {
+        "notionApi": {
+          "id": "REPLACE_NOTION_CREDENTIAL_ID",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000007",
+      "name": "Done"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Get approved rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get approved rows": {
+      "main": [
+        [
+          {
+            "node": "For each row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "For each row": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post": {
+      "main": [
+        [
+          {
+            "node": "Schedule the post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule the post": {
+      "main": [
+        [
+          {
+            "node": "Mark row as scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark row as scheduled": {
+      "main": [
+        [
+          {
+            "node": "For each row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
