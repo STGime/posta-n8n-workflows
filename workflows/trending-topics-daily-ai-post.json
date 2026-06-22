@@ -1,0 +1,364 @@
+{
+  "name": "Trending topics → daily AI post (Perplexity + Anthropic + Posta)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Trending topics → daily AI post\n\n### What it does\n\nEvery morning at 08:00 UTC, asks **Perplexity** what's trending today in your niche, then asks **Anthropic Claude** to draft three per-platform captions (LinkedIn long, Bluesky short, Threads casual). Each caption is created in Posta as a draft and scheduled for that platform's peak hour the same day.\n\n### Pieces to configure (search the workflow for `REPLACE_`)\n\n| Where                          | What                                                                                                       |\n|--------------------------------|------------------------------------------------------------------------------------------------------------|\n| `Ask Perplexity`               | Your Perplexity API token (Header Auth credential) + the niche/topic you care about                       |\n| `Draft per-platform captions`  | Your Anthropic API key (Header Auth credential) — model defaults to `claude-sonnet-4-6`                  |\n| `Build per-platform schedule`  | Your three social account IDs (LinkedIn, Bluesky, Threads) + peak-hour offsets per platform                |\n| `Create a post` + `Schedule…`  | Your Posta API credential                                                                                  |\n\n### Why drafts, not auto-publish\n\nThe workflow lands every post as a **draft** by default. Review the morning batch in Posta's dashboard, edit anything that misses the mark, and flip it to scheduled or publish manually. Once you trust the output for a couple of weeks, swap `isDraft: true` → `false` in the `Create a post` nodes.\n\n### Why this shape (Perplexity → Anthropic, not one model for both)\n\nPerplexity's `sonar` model is grounded in fresh web search — perfect for \"what's trending today\". Claude is the stronger writer for caption polish. Splitting the two roles produces noticeably better output than asking a single model to do both, even if it costs an extra API call.\n\n### Cost\n\nOne run/day = 1 Perplexity call + 1 Anthropic call + 3 Posta drafts. ~$0.01-0.05/day at typical token sizes. Posta drafts on the free tier are unlimited; only publishes count against the post quota.\n\n### Customisation\n\n- Add or drop platforms by editing the array in `Build per-platform schedule`. Add a 4th object for Facebook / Pinterest / etc. and the rest of the workflow handles it.\n- Generate AI images: insert a Runware / fal.ai / DALL·E HTTP step before `Create a post`, then `Posta Upload Media` (URL-based), and pass the returned `mediaId` in the `Create a post` node's `additionalFields.mediaIds`. Out of scope for v1 to keep the moving parts small.",
+        "width": 580,
+        "height": 1080
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        -440
+      ],
+      "id": "0a000000-0000-0000-0000-00000000000a",
+      "name": "Sticky Note – Overview"
+    },
+    {
+      "parameters": {
+        "content": "## 1. Get today's trending angle\n\nPerplexity's `sonar` model is grounded in live web search — ask it for one specific angle to post about today, then extract just the assistant message text.",
+        "width": 460,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -440
+      ],
+      "id": "0b000000-0000-0000-0000-00000000000b",
+      "name": "Sticky Note – Step 1"
+    },
+    {
+      "parameters": {
+        "content": "## 2. Draft + structure\n\nClaude takes the trending angle and writes three captions — long-form LinkedIn, short Bluesky, casual Threads — emitted as strict JSON. The Code node then parses that JSON and produces one item per platform (`platform`, `caption`, `socialAccountIds`, `scheduledAt`) ready to fan out.",
+        "width": 400,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -440
+      ],
+      "id": "0c000000-0000-0000-0000-00000000000c",
+      "name": "Sticky Note – Step 2"
+    },
+    {
+      "parameters": {
+        "content": "## 3. Fan out: create + schedule each post\n\n`Split In Batches` runs the Create + Schedule pair once per platform. Every post lands as a **draft** so you can review the morning batch; once you trust the output, flip `isDraft` to `false` in the Create node and posts will be queued as scheduled.",
+        "width": 720,
+        "height": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        580,
+        -440
+      ],
+      "id": "0d000000-0000-0000-0000-00000000000d",
+      "name": "Sticky Note – Step 3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000001",
+      "name": "Daily at 08:00 UTC"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You surface one specific, post-worthy trending angle for a given niche. Reply in ONE sentence stating the angle, then a bullet list of 2-3 supporting sources (URL + 5-word context each). No preamble.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Niche: REPLACE_WITH_YOUR_NICHE_e.g._agentic_AI_for_developers. What is one angle worth posting about today?\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000002",
+      "name": "Ask Perplexity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_PERPLEXITY_HEADER_AUTH_CRED_ID",
+          "name": "Perplexity Bearer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "01000000-0000-0000-0000-000000000001",
+              "name": "trending_angle",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -20,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000003",
+      "name": "Extract angle"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 1024,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You're writing one trending-topic post for three social networks. Trending angle for today: {{ $json.trending_angle }}.\\n\\nReturn STRICT JSON with three keys and nothing else (no markdown fences, no commentary):\\n{\\n  \\\"linkedin\\\": \\\"<long-form caption, ~800-1500 chars, professional voice, opens with the take, ends with one question to the audience>\\\",\\n  \\\"bluesky\\\": \\\"<short, max 280 chars, specific, no hashtags, links allowed>\\\",\\n  \\\"threads\\\": \\\"<casual, max 500 chars, punchy, one emoji max>\\\"\\n}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000004",
+      "name": "Draft per-platform captions",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ANTHROPIC_HEADER_AUTH_CRED_ID",
+          "name": "Anthropic x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the per-platform schedule array. Each item becomes one Posta\n// create-and-schedule run via Split In Batches.\n//\n// EDIT BELOW: your three social account IDs + peak-hour offsets per platform.\nconst accounts = {\n  linkedin: 'REPLACE_LINKEDIN_ACCOUNT_ID',   // e.g. '35'\n  bluesky:  'REPLACE_BLUESKY_ACCOUNT_ID',    // e.g. '16'\n  threads:  'REPLACE_THREADS_ACCOUNT_ID',    // e.g. '42'\n};\n// 24h clock, UTC. LinkedIn ~09 UTC, Bluesky ~12, Threads ~18 are sane defaults.\nconst peakHours = { linkedin: 9, bluesky: 12, threads: 18 };\n\n// Parse the JSON from Claude (strip markdown fences if any slipped through).\nconst raw = $input.first().json.content[0].text || '';\nconst stripped = raw.replace(/^```(?:json)?\\s*|\\s*```$/g, '').trim();\nconst captions = JSON.parse(stripped);\n\nconst today = new Date();\nfunction at(hour) {\n  const d = new Date(today);\n  d.setUTCHours(hour, 0, 0, 0);\n  return d.toISOString();\n}\n\nreturn Object.keys(captions).map((platform) => ({\n  json: {\n    platform,\n    caption: captions[platform],\n    socialAccountIds: [accounts[platform]],\n    scheduledAt: at(peakHours[platform]),\n  },\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000005",
+      "name": "Build per-platform schedule"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        620,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000006",
+      "name": "For each platform"
+    },
+    {
+      "parameters": {
+        "socialAccountIds": "={{ $json.socialAccountIds }}",
+        "caption": "={{ $json.caption }}",
+        "additionalFields": {
+          "isDraft": true
+        }
+      },
+      "type": "n8n-nodes-posta.posta",
+      "typeVersion": 1,
+      "position": [
+        820,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000007",
+      "name": "Create a post",
+      "credentials": {
+        "postaApi": {
+          "id": "REPLACE_POSTA_CREDENTIAL_ID",
+          "name": "Posta account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "schedule",
+        "postId": "={{ $json.id }}",
+        "scheduledAt": "={{ $('For each platform').item.json.scheduledAt }}"
+      },
+      "type": "n8n-nodes-posta.posta",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000008",
+      "name": "Schedule the post",
+      "credentials": {
+        "postaApi": {
+          "id": "REPLACE_POSTA_CREDENTIAL_ID",
+          "name": "Posta account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1220,
+        80
+      ],
+      "id": "10000000-0000-0000-0000-000000000009",
+      "name": "Done"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily at 08:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Ask Perplexity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Perplexity": {
+      "main": [
+        [
+          {
+            "node": "Extract angle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract angle": {
+      "main": [
+        [
+          {
+            "node": "Draft per-platform captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft per-platform captions": {
+      "main": [
+        [
+          {
+            "node": "Build per-platform schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build per-platform schedule": {
+      "main": [
+        [
+          {
+            "node": "For each platform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "For each platform": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post": {
+      "main": [
+        [
+          {
+            "node": "Schedule the post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule the post": {
+      "main": [
+        [
+          {
+            "node": "For each platform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
